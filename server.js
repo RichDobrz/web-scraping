@@ -23,51 +23,40 @@ app.set('view engine', 'handlebars');
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/articles";
 mongoose.connect(MONGODB_URI)
 
-
-app.get("/articles-json", function(req, res) {
-
-  db.Article.find()
-    .then(function(dbArticle) {
-      res.json(dbArticle)
-    })
-    .catch(function(err) {
-        res.json(err)
-    })
-});
-
-app.get("/articles", function(req, res) {
-
-  db.Article.find({saved: false}).sort( {"_id": -1}).limit(100)
-       .then(articles => {
-         res.render("index", {article: articles})
-       })
-       .catch(function(err) {
-        console.log(err.message);
-      });
-});
-
 app.get("/scrape", function(req, res) {
-  axios.get("https://apnews.com/apf-lifestyle").then(function(response) {
-    const $ = cheerio.load(response.data)
+  axios.get("https://apnews.com/apf-lifestyle")
+    .then((response) => {
+      let $ = cheerio.load(response.data)
 
-    $(".WireStory").each(function(i, element) {
-      let result = {}
-      
-      result.title = $(this).children(".CardHeadLine").children("a").find("h1").text()
-      result.link = $(this).children(".CardHeadLine").children("a").find("h1").attr("href")
-      result.summary = $(this).children("a").children(".content").find("p").text()
+      $(".FeedCard").each((i, element) => {
+        let result = {}
+        
 
-      db.Article.create(result)
-      .then(function(dbArticle) {
-        // View the added result in the console
-        console.log(dbArticle);
+          result.title = $(element).children(".CardHeadline").children(".headline").children("h1").text()
+          result.link = $(element).children(".CardHeadline").children(".headline").attr("href")
+          result.summary = $(element).children(".content-container").children(".content").children("p").text()
+
+
+
+          db.Article.create(result)
+          .then((dbArticle) => {
+            console.log(dbArticle)
+          })
+          .catch((err) => {
+            return res.json(err)
+          })
       })
-      .catch(function(err) {
-        // If an error occurred, send it to the client
-        return res.json(err);
-      });
-
+      res.send("Scrape Complete")
     })
+})
+
+app.get("/articles", (req, res) => {
+  db.Article.find({})
+  .then((dbArticle) => {
+    res.json(dbArticle)
+  })
+  .catch((err) => {
+    res.json(err)
   })
 })
 
