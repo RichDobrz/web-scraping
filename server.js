@@ -52,10 +52,39 @@ app.get("/scrape", function(req, res) {
 
 app.get("/articles", (req, res) => {
   db.Article.find({})
-  .then((dbArticle) => {
-    res.json(dbArticle)
+  .then(dbArticle => {
+    res.render("index", {articles: dbArticle})
   })
   .catch((err) => {
+    res.json(err)
+  })
+})
+
+app.post("/articles/:id", (req, res) => {
+  db.Comment.create(req.body)
+  .then(dbComment => {
+    return db.Article.findOneAndUpdate(
+      { _id: req.params.id },
+      { comments: dbComment._id},
+      { new: true }
+    )
+    .then(dbArticle => {
+      res.json(dbArticle)
+    })
+    .catch(err => {
+      res.json(err)
+    })
+
+  })
+})
+
+app.get("/articles/:id", (req, res) => {
+  db.Article.findOne({ _id: req.params.id })
+  .populate("comment")
+  .then(dbArticle => {
+    res.json(dbArticle)
+  })
+  .catch(err => {
     res.json(err)
   })
 })
